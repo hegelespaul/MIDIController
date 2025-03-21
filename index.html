@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Controller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        let midiAccess;
+        let output = null;
+        let selectedChannel = 0;
+
+        // Inicializa el acceso a MIDI y configura los dispositivos de salida
+        function initMIDI() {
+            navigator.requestMIDIAccess().then(midi => {
+                midiAccess = midi;
+                console.log("Acceso a MIDI inicializado:", midiAccess);
+                updateMIDIDevices(); // Actualiza la lista de dispositivos MIDI disponibles
+            }).catch(err => {
+                console.error("Error al inicializar MIDI:", err);
+            });
+        }
+
+        // Actualiza la lista de dispositivos de salida MIDI
+        function updateMIDIDevices() {
+            const outputSelect = document.getElementById('midiOutput');
+            outputSelect.innerHTML = ''; // Limpia las opciones anteriores
+
+            midiAccess.outputs.forEach(port => {
+                let option = document.createElement('option');
+                option.value = port.id;
+                option.textContent = port.name;
+                outputSelect.appendChild(option);
+            });
+
+            // Selecciona el primer dispositivo de salida por defecto si está disponible
+            if (midiAccess.outputs.size > 0) {
+                output = midiAccess.outputs.values().next().value; // Selecciona el primer dispositivo
+                console.log("Dispositivo de salida por defecto seleccionado:", output.name);
+            }
+        }
+
+        // Cambia el dispositivo de salida MIDI seleccionado
+        function selectMIDIOutput() {
+            const outputSelect = document.getElementById('midiOutput');
+            const selectedId = outputSelect.value;
+            output = midiAccess.outputs.get(selectedId);
+            console.log("Dispositivo de salida MIDI cambiado a:", output ? output.name : "Ninguno");
+        }
+
+        // Envía un mensaje de Control Change (CC) a la salida MIDI
+        function sendCC(controller, value) {
+            if (output) {
+                output.send([0xB0 + selectedChannel, controller, value]);
+                console.log(`Enviado CC ${controller}, Valor: ${value}, Canal: ${selectedChannel}`);
+            } else {
+                console.warn("No se ha seleccionado una salida MIDI");
+            }
+            // Actualiza el texto con el valor del CC
+            document.getElementById(`cc${controller}`).textContent = `CC ${controller}: ${value}`;
+        }
+
+        // Envía un mensaje de 'Note On' (Nota activada)
+        function sendNoteOn(note) {
+            if (output) {
+                output.send([0x90 + selectedChannel, note, 127]);
+                console.log(`Nota ON: ${note}, Canal: ${selectedChannel}`);
+            } else {
+                console.warn("No se ha seleccionado una salida MIDI");
+            }
+        }
+
+        // Envía un mensaje de 'Note Off' (Nota desactivada)
+        function sendNoteOff(note) {
+            if (output) {
+                output.send([0x80 + selectedChannel, note, 0]);
+                console.log(`Nota OFF: ${note}, Canal: ${selectedChannel}`);
+            } else {
+                console.warn("No se ha seleccionado una salida MIDI");
+            }
+        }
+
+        window.onload = initMIDI; // Inicializa el acceso a MIDI al cargar la página
+    </script>
+    <link rel="icon" type="image/png" href="midi.svg">
+</head>
+<body class="flex flex-col items-center justify-center p-4 bg-gray-900 text-white">
+    <h1 class="text-xl font-bold mb-4">Controlador MIDI</h1>
+    
+    <!-- Selector de dispositivo de salida MIDI -->
+    <label for="midiOutput" class="mb-2">Dispositivo de salida MIDI:</label>
+    <select id="midiOutput" onchange="selectMIDIOutput()" class="mb-4 p-2 text-black"></select>
+    
+    <!-- Selector de canal MIDI -->
+    <label for="channel" class="mb-2">Canal MIDI:</label>
+    <select id="channel" onchange="selectedChannel = parseInt(this.value)" class="mb-4 p-2 text-black">
+        <script>
+            // Crea las opciones del selector de canales (16 canales)
+            for (let i = 0; i < 16; i++) {
+                document.write(`<option value="${i}">${i+1}</option>`);
+            }
+        </script>
+    </select>
+    
+    <!-- Creación de sliders para enviar mensajes de Control Change -->
+    <div class="grid grid-cols-4 md:grid-cols-8 gap-4 w-full max-w-4xl mt-20 place-items-center">
+        <script>
+            const numSliders = window.innerWidth >= 768 ? 8 : 4; // Ajusta la cantidad de sliders dependiendo del tamaño de la pantalla
+            for (let i = 20; i < numSliders+20; i++) {
+                document.write(`
+                    <div class="flex flex-col items-center">
+                        <input type="range" min="0" max="127" value="0" class="cursor-pointer appearance-none bg-gray-700 rounded-lg transform rotate-[-90deg] w-32 h-6" 
+                        oninput="sendCC(${i}, this.value)">
+                        <span id="cc${i}" class="mt-20 text-xs">CC ${i}: 0</span>
+                    </div>
+                `);
+            }
+        </script>
+    </div>
+    <br>
+    <!-- Creación de botones para enviar mensajes de 'Note On' y 'Note Off' -->
+    <div class="grid grid-cols-4 md:grid-cols-8 gap-4 w-full max-w-4xl place-items-center">
+        <script>
+            for (let i = 0; i < numSliders; i++) {
+                document.write(`
+                    <button class="w-16 h-16 flex items-center justify-center bg-gray-600 rounded-md text-xs active:bg-gray-400"
+                         onmousedown="sendNoteOn(${60 + i})" onmouseup="sendNoteOff(${60 + i})"
+                         ontouchstart="sendNoteOn(${60 + i})" ontouchend="sendNoteOff(${60 + i})">
+                        ${60 + i}
+                    </button>
+                `);
+            }
+        </script>
+    </div>
+</body>
+</html>
