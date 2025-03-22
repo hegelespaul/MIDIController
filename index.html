@@ -109,7 +109,7 @@
             for (let i = 21; i < numSliders+21; i++) {
                 document.write(`
                     <div class="flex flex-col items-center mb-16">
-                        <input type="range" min="0" max="127" value="0" class="cursor-pointer appearance-none bg-gray-700 rounded-lg transform rotate-[-90deg] w-32 h-6" 
+                        <input type="range" min="0" max="127" value="0" class="cursor-pointer appearance-none bg-gray-700 rounded-lg transform rotate-[-90deg] w-32 h-10" 
                         oninput="sendCC(${i}, this.value)">
                         <span id="cc${i}" class="mt-16 text-xs">CC ${i}: 0</span>
                     </div>
