@@ -9,6 +9,7 @@
         let midiAccess;
         let output = null;
         let selectedChannel = 0;
+        let isSliding = false; // Flag to track slider interaction
 
         // Inicializa el acceso a MIDI y configura los dispositivos de salida
         function initMIDI() {
@@ -79,6 +80,25 @@
                 console.warn("No se ha seleccionado una salida MIDI");
             }
         }
+
+        // Prevent scrolling while interacting with sliders
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll("input[type=range]").forEach(slider => {
+                slider.addEventListener("touchstart", (e) => {
+                    isSliding = true;
+                    // Disable scrolling while interacting with the slider
+                    e.preventDefault();
+                });
+
+                slider.addEventListener("touchmove", (e) => {
+                    if (isSliding) e.preventDefault(); // Disable scrolling only while sliding
+                }, { passive: false });
+
+                slider.addEventListener("touchend", () => {
+                    isSliding = false; // Re-enable scrolling
+                });
+            });
+        });
 
         window.onload = initMIDI; // Inicializa el acceso a MIDI al cargar la página
     </script>
